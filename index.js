@@ -1,17 +1,39 @@
-const axios = require('axios');
+const axios = require('axios')
+var util = require('util')
 
-const apikey =process.env.APIKEY
-#parameter would include hash string
-exports.handler =  async function(event, context) {
-  const { hash } = event.hash 
-  const url = "www.hybrid-analysis.com/api/v2/overview/" + hash
-
-  const result = axios.get(url, {
-    headers: {
-      'api-key': apikey
+const getCircularReplacer = () => {
+  const seen = new WeakSet();
+  return (key, value) => {
+    if (typeof value === "object" && value !== null) {
+      if (seen.has(value)) {
+        return;
+      }
+      seen.add(value);
     }
-  });
+    return value;
+  };
+};
 
-  console.log("EVENT: \n" + JSON.stringify(event, null, 2))
-  return context.logStreamName
-}
+
+
+exports.handler = async (event, context) => {
+  const { hash } = event 
+  const url = "http://www.hybrid-analysis.com/api/v2/overview/" + hash
+    try {
+      const res = await axios.get(url, {headers: {
+      'api-key': process.env.APIKEY
+    }})
+
+        return {
+            statusCode: 200,
+            body: JSON.stringify(res, getCircularReplacer())
+
+        }
+    } catch (e) {
+        console.log(e)
+        return {
+            statusCode: 400,
+            body: (e)
+        }
+    }
+};
